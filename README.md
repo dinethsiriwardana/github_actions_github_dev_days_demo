@@ -146,33 +146,32 @@ jobs:
 
 ---
 
-### Stage 5: Composite Actions (`stage-5-composite-action`)
-As our workflow grew, the "setup, login, build, and push" steps became repetitive. What if we have multiple workflows (e.g., Staging, Production)? We refactor this logic into a reusable **Composite Action**.
+### Stage 5: Composite Actions & Artifacts (`stage-5-composite-action`)
+As our workflow grows, we can bundle steps into **Composite Actions** to make them reusable and our main workflow cleaner. In this stage, we also introduce **GitHub Actions Artifacts** to capture and attach build logs directly to the workflow run.
 
-**1. The Reusable Action (`.github/actions/docker-build-push/action.yml`):**
+**1. The Reusable Action (`.github/actions/upload-build-report/action.yml`):**
 ```yaml
-name: 'Docker Build & Push'
-description: 'Builds and pushes a Docker image to Docker Hub'
+name: 'Upload Build Report'
+description: 'Generates a build report and uploads it as an artifact'
 inputs:
-  image-tag:
-    required: true
   platform:
+    description: 'The platform that was built'
     required: true
 runs:
   using: "composite"
   steps:
-    - uses: docker/setup-buildx-action@v3
-    - uses: docker/login-action@v3
+    - name: Generate Report
+      run: |
+        echo "Build Report" > build-report.txt
+        echo "====================" >> build-report.txt
+        echo "Successfully built Docker image for platform: ${{ inputs.platform }}" >> build-report.txt
+        echo "Build completed at: $(date)" >> build-report.txt
+      shell: bash
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
       with:
-        username: ${{ env.DOCKERHUB_USERNAME }}
-        password: ${{ env.DOCKERHUB_TOKEN }}
-    - uses: docker/build-push-action@v6
-      with:
-        platforms: ${{ inputs.platform }}
-        push: true
-        tags: ${{ inputs.image-tag }}
-        cache-from: type=gha,scope=${{ github.workflow }}-${{ inputs.platform }}
-        cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ inputs.platform }}
+        name: build-report-${{ inputs.platform }}
+        path: build-report.txt
 ```
 
 **2. The Cleaned-Up Workflow (`.github/workflows/release.yml`):**
@@ -180,16 +179,15 @@ runs:
     steps:
       - uses: actions/checkout@v4
       
-      # NEW: Call our custom composite action
-      - uses: ./.github/actions/docker-build-push
+      # ... Docker setup, login, and build-push steps ...
+
+      # NEW: Call our custom composite action to generate and upload the report!
+      - uses: ./.github/actions/upload-build-report
         with:
-          image-tag: ${{ vars.DOCKERHUB_REPO }}:latest-${{ matrix.tag_suffix }}
-          platform: ${{ matrix.platform }}
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          platform: ${{ matrix.tag_suffix }}
 ```
-* **Composite Actions**: Allow you to bundle multiple workflow steps into a single reusable component. This makes your main workflow files clean, declarative, and easy to maintain across large organizations.
+* **Composite Actions**: We created a custom action that encapsulates bash scripting and third-party actions (`upload-artifact`) into one neat, reusable component. 
+* **Artifacts**: Once the workflow finishes, you can download `build-report-amd64.zip` and `build-report-arm64.zip` directly from the GitHub Actions summary page!
 
 ---
 
