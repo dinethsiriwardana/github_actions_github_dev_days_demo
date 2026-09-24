@@ -6,7 +6,16 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            tag_suffix: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            tag_suffix: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,7 +28,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
+          platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ vars.DOCKERHUB_REPO }}:latest
+          tags: ${{ vars.DOCKERHUB_REPO }}:latest-${{ matrix.tag_suffix }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
