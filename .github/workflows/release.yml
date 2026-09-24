@@ -4,6 +4,9 @@ on:
   push:
     branches: [release]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     strategy:
