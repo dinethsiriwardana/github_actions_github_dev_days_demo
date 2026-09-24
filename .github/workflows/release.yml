@@ -36,3 +36,7 @@ jobs:
           tags: ${{ vars.DOCKERHUB_REPO }}:latest-${{ matrix.tag_suffix }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.platform }}
+
+      - uses: ./.github/actions/upload-build-report
+        with:
+          platform: ${{ matrix.tag_suffix }}

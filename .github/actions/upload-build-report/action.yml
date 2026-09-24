@@ -1,0 +1,21 @@
+name: 'Upload Build Report'
+description: 'Generates a build report and uploads it as an artifact'
+inputs:
+  platform:
+    description: 'The platform that was built'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Generate Report
+      run: |
+        echo "Build Report" > build-report.txt
+        echo "====================" >> build-report.txt
+        echo "Successfully built Docker image for platform: ${{ inputs.platform }}" >> build-report.txt
+        echo "Build completed at: \$(date)" >> build-report.txt
+      shell: bash
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-report-${{ inputs.platform }}
+        path: build-report.txt
